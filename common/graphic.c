@@ -245,6 +245,7 @@ void fb_draw_image(int x, int y, fb_image *image, int color)
 					    colord[0] = temp[0];
 						colord[1] = temp[1];
 						colord[2] = temp[2];
+						break;
 					default:
 						colord[0] += (((temp[0] - colord[0]) * alpha) >> 8);
 						colord[1] += (((temp[1] - colord[1]) * alpha) >> 8);
@@ -258,12 +259,25 @@ void fb_draw_image(int x, int y, fb_image *image, int color)
 	{
 		//printf("you need implement fb_draw_image() FB_COLOR_ALPHA_8\n");
 		int x0, y0, x3, y3;
-		char* temp;
+		unsigned char alpha;
+		char* colord, *temp;
 		for(y0=y, y3=iy;y0<y+h;y0++,y3++){
 			for(x0=x, x3=ix;x0<x+w;x0++,x3++){
+				colord = (char*)(buf+y0*SCREEN_WIDTH+x0);
 				temp = image->content+y3*image->pixel_w+x3;
-				if(*temp!=0)
-				    *(buf+y0*SCREEN_WIDTH+x0) = color;
+				alpha = *temp;
+				switch (alpha){
+					case 0: break;
+					case 255:
+					    colord[0] = (color & 0xff);
+						colord[1] = (color & 0xff00)>>8;
+						colord[2] = (color & 0xff0000)>>16;
+						break;
+					default:
+						colord[0] += ((((color & 0xff) - colord[0]) * alpha) >> 8);
+						colord[1] += (((((color & 0xff00)>>8)- colord[1]) * alpha) >> 8);
+						colord[2] += (((((color & 0xff0000)>>16) - colord[2]) * alpha) >> 8);
+				}
 			}
 		}
 		return;

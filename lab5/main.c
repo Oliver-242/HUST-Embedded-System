@@ -94,7 +94,7 @@ int main(int argc, char *argv[])
 	fb_draw_text(SEND_X+2, SEND_Y+30, "send", 24, COLOR_TEXT);
 	fb_update();
 
-	touch_fd = touch_init("/dev/input/event0");
+	touch_fd = touch_init("/dev/input/event1");
 	task_add_file(touch_fd, touch_event_cb);
 
 	bluetooth_fd = bluetooth_tty_init("/dev/rfcomm0");

@@ -1,4 +1,3 @@
-
 EXENAME:=lab5
 EXESRCS:=main.c
 
