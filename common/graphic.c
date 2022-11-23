@@ -11,6 +11,16 @@
 #include <string.h>
 #include <math.h>
 
+#define RED	FB_COLOR(255,0,0)
+#define ORANGE	FB_COLOR(255,165,0)
+#define YELLOW	FB_COLOR(255,255,0)
+#define GREEN	FB_COLOR(0,255,0)
+#define CYAN	FB_COLOR(0,127,255)
+#define BLUE	FB_COLOR(0,0,255)
+#define PURPLE	FB_COLOR(139,0,255)
+#define WHITE   FB_COLOR(255,255,255)
+#define BLACK   FB_COLOR(0,0,0)
+
 static int LCD_FB_FD;
 static int *LCD_FB_BUF = NULL;
 static int DRAW_BUF[SCREEN_WIDTH*SCREEN_HEIGHT];
@@ -337,6 +347,108 @@ void fb_draw_circle(int x, int y, int r, int color)
 				*(buf+y0*SCREEN_WIDTH+x0) = color;
 			}
 		}
+	}
+	return;
+}
+
+
+void imagecentralize(imageplus* imgplus){
+	fb_draw_image(imgplus->x, imgplus->y, imgplus->image, BLACK);
+	return;
+}
+
+
+
+void drawimage(imageplus* imgplus){
+	if(imgplus->image == NULL) return;
+
+	double ratio_incre = (double)(imgplus->image->pixel_w)/(imgplus->w);
+
+	int ix = 0; //image x  实际绘图的图像起始坐标  而x.y代表屏幕上的显示范围
+	int iy = 0; //image y
+	int w = imgplus->w; //draw width
+	int h = imgplus->h; //draw height
+	int x = imgplus->x;
+	int y = imgplus->y;
+
+	if(x<0) {w+=x; ix-=x; x=0;}
+	if(y<0) {h+=y; iy-=y; y=0;}
+	
+	if(x+w > SCREEN_WIDTH) {
+		w = SCREEN_WIDTH - x;
+	}
+	if(y+h > SCREEN_HEIGHT) {
+		h = SCREEN_HEIGHT - y;
+	}
+	if((w <= 0)||(h <= 0)) return;
+
+	int *buf = _begin_draw(x,y,w,h);
+	int *temp;
+	
+	//if(imgplus->image->color_type == FB_COLOR_RGB_8880) 
+	//{
+		double x3, y3;
+		int x0, y0;
+		for(y0=y, y3=iy;y0<y+h;y0++){
+			for(x0=x, x3=ix;x0<x+w;x0++){
+				//printf("%d %d %d %d\n", x0, y0, x3, y3);
+				temp = (int*)(imgplus->image->content+((int)y3)*imgplus->image->pixel_w*4+((int)x3)*4);
+				*(buf+y0*SCREEN_WIDTH+x0) = *temp;
+				x3 += ratio_incre;
+			}
+			y3 += ratio_incre;
+		}
+	//}
+	return;
+}
+
+
+void imagescaling(imageplus* imgplus, int type){
+	int zoom_size_x = 30;
+	int zoom_size_y;
+	int offset_size = 30;
+	switch(type){
+		case 0://fangda
+			fb_draw_rect(0,0,SCREEN_WIDTH,SCREEN_HEIGHT,BLACK);
+			zoom_size_y = (int)(zoom_size_x * ((double)(imgplus->image->pixel_h)/(imgplus->image->pixel_w)));
+			printf("%d %d\n", zoom_size_x, zoom_size_y);
+			imgplus->x -= zoom_size_x;
+			imgplus->y -= zoom_size_y;
+			imgplus->w += 2*zoom_size_x;
+			imgplus->h += 2*zoom_size_y;
+			drawimage(imgplus);
+			break;
+		case 1://suoxiao
+			fb_draw_rect(0,0,SCREEN_WIDTH,SCREEN_HEIGHT,BLACK);
+			zoom_size_y = (int)(zoom_size_x * ((double)(imgplus->image->pixel_h)/(imgplus->image->pixel_w)));
+			imgplus->x += zoom_size_x;
+			imgplus->y += zoom_size_y;
+			imgplus->w -= 2*zoom_size_x;
+			imgplus->h -= 2*zoom_size_y;
+			drawimage(imgplus);
+			break;
+		case 2://zuoyi
+			fb_draw_rect(0,0,SCREEN_WIDTH,SCREEN_HEIGHT,BLACK);
+			imgplus->x -= offset_size;
+			drawimage(imgplus);
+			break;
+		case 3://youyi
+			fb_draw_rect(0,0,SCREEN_WIDTH,SCREEN_HEIGHT,BLACK);
+			imgplus->x += offset_size;
+			drawimage(imgplus);
+			break;
+		case 4://shangyi
+			fb_draw_rect(0,0,SCREEN_WIDTH,SCREEN_HEIGHT,BLACK);
+			imgplus->y -= offset_size;
+			drawimage(imgplus);
+			break;
+		case 5://xiayi
+			fb_draw_rect(0,0,SCREEN_WIDTH,SCREEN_HEIGHT,BLACK);
+			imgplus->y += offset_size;
+			drawimage(imgplus);
+			break;
+		default:
+			break;
 	}
 	return;
 }

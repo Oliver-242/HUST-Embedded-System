@@ -54,6 +54,14 @@ typedef struct {
 	char *content; /*4 byte align*/
 } fb_image;
 
+typedef struct{
+	int x;
+	int y;
+	int w;
+	int h;
+	fb_image* image;
+}imageplus;
+
 fb_image * fb_new_image(int color_type, int w, int h, int line_byte);
 void fb_free_image(fb_image *image);
 
