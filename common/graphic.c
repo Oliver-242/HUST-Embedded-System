@@ -178,7 +178,7 @@ void fb_draw_line(int x1, int y1, int x2, int y2, int color)
 	int xx, yy;
 	int stepx = (x2>x1)?1:-1;
 	int stepy = (y2>y1)?1:-1;
-	int* buf;
+	int* buf = _begin_draw(0,0,SCREEN_WIDTH,SCREEN_HEIGHT);
 	int slope = (x1==x2)?-1:abs((y2-y1)/(x2-x1));
 	if(slope<1 && slope>=0)
 	for(xx=x1;xx!=(x2+stepx);xx+=stepx){
