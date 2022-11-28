@@ -21,66 +21,109 @@
 #define PCM_SAMPLE_RATE 16000 /* 16KHz */
 
 static char * send_to_vosk_server(char *file);
-extern void imagecentralize(imageplus* image);
-extern void imagescaling(imageplus* image, int type);
+extern void imagecentralize(imageplus* , fb_image* );
+extern void imagescaling(imageplus* , int );
+static void touch_event_cb(int fd);
+
+static int touch_fd, point, type;
+static int radius[5] = {45,47,49,51,53};
+static struct old_pos{
+	int x;
+	int y;
+} old[5];
+static char* jpgs[3] = {"./test.jpg","./test1.jpg","./test2.jpg"};
+
+static fb_image* img;
+static imageplus* imgplus;
+static pcm_info_st pcm_info;
 
 int main(int argc, char *argv[])
 {
 	fb_init("/dev/fb0");
 	fb_draw_rect(0,0,SCREEN_WIDTH,SCREEN_HEIGHT,BLACK);
-	fb_update();
-
-	fb_image *img;
-	imageplus *imgplus = (imageplus*)malloc(sizeof(imageplus));
-	img = fb_read_jpeg_image("./test.jpg");
-	imgplus->w = img->pixel_w;
-	imgplus->h = img->pixel_h;
-	imgplus->x = 512 - img->pixel_w/2;
-	imgplus->y = 300 - img->pixel_h/2;
-	imgplus->image = img;
-	imagecentralize(imgplus);
-	fb_update();
-	//fb_free_image(img);
 	
-	int type = 0;
+	imgplus = (imageplus*)malloc(sizeof(imageplus));
+	point = 0;
 	
-	//------------------------------------------------------------------------------------------
+	img = fb_read_jpeg_image(jpgs[point]);
+	imagecentralize(imgplus,img);
+	fb_draw_rect(0,0,100,100,PURPLE);
+	fb_update();
 
 	audio_record_init(NULL, PCM_SAMPLE_RATE, 1, 16); //单声道，S16采样
+	
+	//打开多点触摸设备文件, 返回文件fd
+	touch_fd = touch_init("/dev/input/event1");
+	//添加任务, 当touch_fd文件可读时, 会自动调用touch_event_cb函数
+	task_add_file(touch_fd, touch_event_cb);
+	task_loop(); //进入任务循环
 
-	pcm_info_st pcm_info;
-	while(true){
-		type = -1;
-		printf("1秒后开始录制：\n");
-		sleep(1);
-		printf("开始！\n");
-		uint8_t *pcm_buf = audio_record(2000, &pcm_info); //录2秒音频
-
-		if(pcm_info.sampleRate != PCM_SAMPLE_RATE) { //实际录音采用率不满足要求时 resample
-			uint8_t *pcm_buf2 = pcm_s16_mono_resample(pcm_buf, &pcm_info, PCM_SAMPLE_RATE, &pcm_info);
-			pcm_free_buf(pcm_buf);
-			pcm_buf = pcm_buf2;
-		}
-
-		pcm_write_wav_file(pcm_buf, &pcm_info, "/tmp/test.wav");
-		printf("write wav end\n");
-
-		pcm_free_buf(pcm_buf);
-
-		char *rev = send_to_vosk_server("/tmp/test.wav");
-		printf("recv from server: %s\n", rev);
-		if(strcmp(rev, "放大") == 0) type = 0;
-		else if(strcmp(rev, "缩小") == 0) type = 1;
-		else if(strcmp(rev, "左") == 0) type = 2;
-		else if(strcmp(rev, "右") == 0) type = 3;
-		else if(strcmp(rev, "上移") == 0) type = 4;
-		else if(strcmp(rev, "下移") == 0) type = 5;
-		else type = -1;
-		imagescaling(imgplus,type);
-		fb_update();
-	}
 	return 0;
 }
+
+
+static void touch_event_cb(int fd)
+{
+	int type1,x,y,finger, color;
+	type1 = touch_read(fd, &x,&y,&finger);
+	switch(type1){
+	case TOUCH_PRESS:
+		if(x<=100 && y<=100){
+			point = (point+1)%3;
+			img = fb_read_jpeg_image(jpgs[point]);
+			fb_draw_rect(0,0,SCREEN_WIDTH,SCREEN_HEIGHT,BLACK);
+			imagecentralize(imgplus,img);
+			fb_draw_rect(0,0,100,100,PURPLE);
+		}
+		else{
+			type = -1;
+			printf("\n1秒后开始录制:\n");
+			sleep(1);
+			printf("开始！\n");
+			uint8_t *pcm_buf = audio_record(1800, &pcm_info); //录2秒音频
+
+			if(pcm_info.sampleRate != PCM_SAMPLE_RATE) { //实际录音采用率不满足要求时 resample
+				uint8_t *pcm_buf2 = pcm_s16_mono_resample(pcm_buf, &pcm_info, PCM_SAMPLE_RATE, &pcm_info);
+				pcm_free_buf(pcm_buf);
+				pcm_buf = pcm_buf2;
+			}
+
+			pcm_write_wav_file(pcm_buf, &pcm_info, "/tmp/test.wav");
+			//printf("write wav end\n");
+
+			pcm_free_buf(pcm_buf);
+
+			char *rev = send_to_vosk_server("/tmp/test.wav");
+			printf("recv from server: %s\n", rev);
+			if(strcmp(rev, "放大") == 0) type = 0;
+			else if(strcmp(rev, "缩小") == 0) type = 1;
+			else if(strcmp(rev, "左") == 0) type = 2;
+			else if(strcmp(rev, "右") == 0) type = 3;
+			else if(strcmp(rev, "上移") == 0) type = 4;
+			else if(strcmp(rev, "下移") == 0) type = 5;
+			else if(strcmp(rev, "全屏") == 0) type = 6;
+			else if(strcmp(rev, "恢复") == 0) type = 7;
+			else type = -1;
+			imagescaling(imgplus,type);
+			printf("完毕!\n");
+		}
+		break;
+	case TOUCH_MOVE:
+		break;
+	case TOUCH_RELEASE:
+		break;
+	case TOUCH_ERROR:
+		printf("close touch fd\n");
+		close(fd);
+		task_delete_file(fd);
+		break;
+	default:
+		return;
+	}
+	fb_update();
+	return;
+}
+
 
 /*===============================================================*/	
 

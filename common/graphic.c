@@ -327,6 +327,8 @@ void fb_draw_text(int x, int y, char *text, int font_size, int color)
 	return;
 }
 
+/*-----------------------------------------------------------------------------*/
+
 void fb_draw_circle(int x, int y, int r, int color)
 {
 	int w, h, x0, y0, left, right, top, bottom;
@@ -352,11 +354,15 @@ void fb_draw_circle(int x, int y, int r, int color)
 }
 
 
-void imagecentralize(imageplus* imgplus){
+void imagecentralize(imageplus* imgplus, fb_image* img){
+	imgplus->image = img;
+	imgplus->w = img->pixel_w;
+	imgplus->h = img->pixel_h;
+	imgplus->x = 512 - imgplus->image->pixel_w/2;
+	imgplus->y = 300 - imgplus->image->pixel_h/2;
 	fb_draw_image(imgplus->x, imgplus->y, imgplus->image, BLACK);
 	return;
 }
-
 
 
 void drawimage(imageplus* imgplus){
@@ -391,7 +397,6 @@ void drawimage(imageplus* imgplus){
 		int x0, y0;
 		for(y0=y, y3=iy;y0<y+h;y0++){
 			for(x0=x, x3=ix;x0<x+w;x0++){
-				//printf("%d %d %d %d\n", x0, y0, x3, y3);
 				temp = (int*)(imgplus->image->content+((int)y3)*imgplus->image->pixel_w*4+((int)x3)*4);
 				*(buf+y0*SCREEN_WIDTH+x0) = *temp;
 				x3 += ratio_incre;
@@ -404,19 +409,19 @@ void drawimage(imageplus* imgplus){
 
 
 void imagescaling(imageplus* imgplus, int type){
-	int zoom_size_x = 30;
+	int zoom_size_x = 50;
 	int zoom_size_y;
-	int offset_size = 30;
+	int offset_size = 60;
 	switch(type){
 		case 0://fangda
 			fb_draw_rect(0,0,SCREEN_WIDTH,SCREEN_HEIGHT,BLACK);
 			zoom_size_y = (int)(zoom_size_x * ((double)(imgplus->image->pixel_h)/(imgplus->image->pixel_w)));
-			printf("%d %d\n", zoom_size_x, zoom_size_y);
 			imgplus->x -= zoom_size_x;
 			imgplus->y -= zoom_size_y;
 			imgplus->w += 2*zoom_size_x;
 			imgplus->h += 2*zoom_size_y;
 			drawimage(imgplus);
+			fb_draw_rect(0,0,100,100,PURPLE);
 			break;
 		case 1://suoxiao
 			fb_draw_rect(0,0,SCREEN_WIDTH,SCREEN_HEIGHT,BLACK);
@@ -426,26 +431,45 @@ void imagescaling(imageplus* imgplus, int type){
 			imgplus->w -= 2*zoom_size_x;
 			imgplus->h -= 2*zoom_size_y;
 			drawimage(imgplus);
+			fb_draw_rect(0,0,100,100,PURPLE);
 			break;
 		case 2://zuoyi
 			fb_draw_rect(0,0,SCREEN_WIDTH,SCREEN_HEIGHT,BLACK);
 			imgplus->x -= offset_size;
 			drawimage(imgplus);
+			fb_draw_rect(0,0,100,100,PURPLE);
 			break;
 		case 3://youyi
 			fb_draw_rect(0,0,SCREEN_WIDTH,SCREEN_HEIGHT,BLACK);
 			imgplus->x += offset_size;
 			drawimage(imgplus);
+			fb_draw_rect(0,0,100,100,PURPLE);
 			break;
 		case 4://shangyi
 			fb_draw_rect(0,0,SCREEN_WIDTH,SCREEN_HEIGHT,BLACK);
 			imgplus->y -= offset_size;
 			drawimage(imgplus);
+			fb_draw_rect(0,0,100,100,PURPLE);
 			break;
 		case 5://xiayi
 			fb_draw_rect(0,0,SCREEN_WIDTH,SCREEN_HEIGHT,BLACK);
 			imgplus->y += offset_size;
 			drawimage(imgplus);
+			fb_draw_rect(0,0,100,100,PURPLE);
+			break;
+		case 6://quanping
+			fb_draw_rect(0,0,SCREEN_WIDTH,SCREEN_HEIGHT,BLACK);
+			imgplus->w = SCREEN_WIDTH;
+			imgplus->h = (int)(SCREEN_WIDTH * ((double)(imgplus->image->pixel_h)/(imgplus->image->pixel_w)));
+			imgplus->x = 0;
+			imgplus->y = 0;
+			drawimage(imgplus);
+			fb_draw_rect(0,0,100,100,PURPLE);
+			break;
+		case 7://huifu
+			fb_draw_rect(0,0,SCREEN_WIDTH,SCREEN_HEIGHT,BLACK);
+			imagecentralize(imgplus, imgplus->image);
+			fb_draw_rect(0,0,100,100,PURPLE);
 			break;
 		default:
 			break;
